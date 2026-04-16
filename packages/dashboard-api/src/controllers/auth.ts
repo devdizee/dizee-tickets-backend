@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
+import { timingSafeEqual } from 'crypto';
 import { UserModel, apiResponse, signupSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } from '@dizee-tickets/shared';
 import { AuthenticatedRequest } from '@dizee-tickets/shared';
 import { generateAccessToken, generateRefreshToken, blacklistToken } from '../middleware/auth';
@@ -178,6 +179,34 @@ export async function resetPassword(req: Request, res: Response) {
     await user.save();
 
     return res.status(200).json(new apiResponse(200, 'Password reset successful'));
+  } catch (error: any) {
+    return res.status(500).json(new apiResponse(500, 'Internal server error'));
+  }
+}
+
+export async function protectAuth(req: Request, res: Response) {
+  try {
+    const { password } = req.body;
+    const sitePassword = process.env.SITE_PROTECTION_PASSWORD;
+
+    if (!sitePassword) {
+      return res.status(200).json(new apiResponse(200, 'Access granted', { authenticated: true }));
+    }
+
+    if (!password) {
+      return res.status(400).json(new apiResponse(400, 'Password required'));
+    }
+
+    const provided = Buffer.from(String(password));
+    const expected = Buffer.from(String(sitePassword));
+
+    const isValid = provided.length === expected.length && timingSafeEqual(provided, expected);
+
+    if (!isValid) {
+      return res.status(401).json(new apiResponse(401, 'Invalid password'));
+    }
+
+    return res.status(200).json(new apiResponse(200, 'Access granted', { authenticated: true }));
   } catch (error: any) {
     return res.status(500).json(new apiResponse(500, 'Internal server error'));
   }
