@@ -1,0 +1,27 @@
+{
+  "name": "dizee-tickets-backend",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev --parallel",
+    "dev:dashboard": "npm run dev -w @dizee-tickets/dashboard-api",
+    "dev:webhook": "npm run dev -w @dizee-tickets/webhook-api",
+    "dev:workers": "npm run dev -w @dizee-tickets/workers",
+    "lint": "turbo run lint",
+    "clean": "turbo run clean",
+    "seed": "ts-node scripts/seed.ts",
+    "typecheck": "turbo run typecheck"
+  },
+  "devDependencies": {
+    "turbo": "^2.4.0",
+    "typescript": "^5.4.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "packageManager": "npm@10.0.0"
+}
