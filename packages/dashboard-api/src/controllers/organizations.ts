@@ -54,6 +54,11 @@ export async function updateOrganization(req: AuthenticatedRequest, res: Respons
     const parsed = updateOrgSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json(new apiResponse(400, 'Validation failed', {}, parsed.error.flatten()));
 
+    if (parsed.data.slug) {
+      const existing = await OrganizationModel.findOne({ slug: parsed.data.slug, _id: { $ne: req.params.id } });
+      if (existing) return res.status(409).json(new apiResponse(409, 'Username is already taken'));
+    }
+
     const org = await OrganizationModel.findByIdAndUpdate(req.params.id, parsed.data, { new: true });
     if (!org) return res.status(404).json(new apiResponse(404, 'Organization not found'));
 

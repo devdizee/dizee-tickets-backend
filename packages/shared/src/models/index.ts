@@ -13,3 +13,22 @@ export { FanModel, type IFan } from './Fan';
 export { GuestListModel, type IGuestList } from './GuestList';
 export { GuestRequestModel, type IGuestRequest, GUEST_STATUSES, type GuestStatus } from './GuestRequest';
 export { IntegrationSyncLogModel, type IIntegrationSyncLog } from './IntegrationSyncLog';
+export { MerchModel, type IMerch, MERCH_TYPES, type MerchType, MERCH_STATUSES, type MerchStatus } from './Merch';
+export {
+  ActivityModel,
+  type IActivity,
+  ACTIVITY_SECTIONS,
+  ACTIVITY_ACTIONS,
+  ACTIVITY_STATUSES,
+  type ActivitySection,
+  type ActivityAction,
+  type ActivityStatus,
+} from './Activity';
+export {
+  WaitlistModel,
+  type IWaitlist,
+  WAITLIST_ROLES,
+  WAITLIST_STATUSES,
+  type WaitlistRole,
+  type WaitlistStatus,
+} from './Waitlist';

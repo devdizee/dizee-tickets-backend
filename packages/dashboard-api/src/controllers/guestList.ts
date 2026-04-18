@@ -74,7 +74,7 @@ export async function approveGuestRequest(req: AuthenticatedRequest, res: Respon
           request.email,
           request.name,
           show.title,
-          show.date.toLocaleDateString()
+          show.perf_date || ''
         ).catch(() => {});
       }
     }

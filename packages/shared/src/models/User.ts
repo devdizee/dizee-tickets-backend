@@ -9,6 +9,8 @@ export interface IUser extends Document {
   emailVerificationToken?: string;
   passwordResetToken?: string;
   passwordResetExpires?: Date;
+  otpCode?: string;
+  otpExpires?: Date;
   lastLoginAt?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -24,12 +26,14 @@ const UserSchema = new Schema<IUser>(
     emailVerificationToken: { type: String, select: false },
     passwordResetToken: { type: String, select: false },
     passwordResetExpires: { type: Date, select: false },
+    otpCode: { type: String, select: false },
+    otpExpires: { type: Date, select: false },
     lastLoginAt: { type: Date },
   },
   {
     timestamps: true,
     toJSON: {
-      transform(_doc, ret) {
+      transform(_doc, ret: Record<string, any>) {
         ret.id = ret._id;
         delete ret._id;
         delete ret.__v;
@@ -37,6 +41,8 @@ const UserSchema = new Schema<IUser>(
         delete ret.emailVerificationToken;
         delete ret.passwordResetToken;
         delete ret.passwordResetExpires;
+        delete ret.otpCode;
+        delete ret.otpExpires;
       },
     },
   }

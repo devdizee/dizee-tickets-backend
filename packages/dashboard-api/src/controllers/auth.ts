@@ -2,10 +2,38 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import { timingSafeEqual } from 'crypto';
-import { UserModel, apiResponse, signupSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } from '@dizee-tickets/shared';
+import { UserModel, OrganizationModel, MembershipModel, apiResponse, signupSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema, generateUniqueSlug } from '@dizee-tickets/shared';
 import { AuthenticatedRequest } from '@dizee-tickets/shared';
 import { generateAccessToken, generateRefreshToken, blacklistToken } from '../middleware/auth';
-import { sendEmail } from '@dizee-tickets/shared';
+import {
+  sendEmail,
+  renderTicketsOtpEmailHtml,
+  renderTicketsPasswordResetEmailHtml,
+} from '@dizee-tickets/shared';
+
+async function ensureOrganization(userId: string, userName: string, userEmail: string) {
+  const existing = await MembershipModel.findOne({ userId, status: 'active' });
+  if (existing) {
+    const org = await OrganizationModel.findById(existing.organizationId);
+    return { organization: org, role: existing.role, membershipId: existing._id };
+  }
+
+  const slug = generateUniqueSlug(userName || userEmail.split('@')[0]);
+  const org = await OrganizationModel.create({
+    name: userName || userEmail.split('@')[0],
+    slug,
+    type: 'artist',
+  });
+
+  const membership = await MembershipModel.create({
+    userId,
+    organizationId: org._id,
+    role: 'owner',
+    status: 'active',
+  });
+
+  return { organization: org, role: 'owner' as const, membershipId: membership._id };
+}
 
 export async function signup(req: Request, res: Response) {
   try {
@@ -34,26 +62,13 @@ export async function signup(req: Request, res: Response) {
     const accessToken = generateAccessToken(user._id.toString());
     const refreshToken = generateRefreshToken(user._id.toString());
 
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-    await sendEmail({
-      to: email,
-      subject: 'Verify your DIZEE Tickets account',
-      html: `
-        <div style="font-family:Helvetica,Arial,sans-serif;max-width:480px;margin:0 auto;padding:40px 20px;background:#000;color:#fff;">
-          <div style="font-size:18px;letter-spacing:1px;margin-bottom:32px;">DIZEE TICKETS</div>
-          <div style="font-size:20px;font-weight:bold;margin-bottom:8px;">Verify your email</div>
-          <div style="font-size:14px;color:#999;margin-bottom:24px;">Click below to verify your email address.</div>
-          <div style="text-align:center;margin:24px 0;">
-            <a href="${frontendUrl}/verify-email?token=${verificationToken}" style="display:inline-block;background:#FF2300;color:#fff;text-decoration:none;font-weight:bold;padding:12px 24px;border-radius:8px;">Verify Email</a>
-          </div>
-        </div>
-      `,
-    }).catch(() => {}); // non-blocking
+    const orgData = await ensureOrganization(user._id.toString(), name, email);
 
     return res.status(201).json(new apiResponse(201, 'Account created', {
       user: user.toJSON(),
       accessToken,
       refreshToken,
+      organization: orgData,
     }));
   } catch (error: any) {
     return res.status(500).json(new apiResponse(500, 'Internal server error', {}, error.message));
@@ -84,10 +99,13 @@ export async function login(req: Request, res: Response) {
     const accessToken = generateAccessToken(user._id.toString());
     const refreshToken = generateRefreshToken(user._id.toString());
 
+    const orgData = await ensureOrganization(user._id.toString(), user.name, user.email);
+
     return res.status(200).json(new apiResponse(200, 'Login successful', {
       user: user.toJSON(),
       accessToken,
       refreshToken,
+      organization: orgData,
     }));
   } catch (error: any) {
     return res.status(500).json(new apiResponse(500, 'Internal server error', {}, error.message));
@@ -104,7 +122,9 @@ export async function logout(req: AuthenticatedRequest, res: Response) {
 }
 
 export async function me(req: AuthenticatedRequest, res: Response) {
-  return res.status(200).json(new apiResponse(200, 'Current user', { user: req.user }));
+  const user = req.user!;
+  const orgData = await ensureOrganization(user._id.toString(), user.name, user.email);
+  return res.status(200).json(new apiResponse(200, 'Current user', { user, organization: orgData }));
 }
 
 export async function verifyEmail(req: Request, res: Response) {
@@ -140,19 +160,11 @@ export async function forgotPassword(req: Request, res: Response) {
     await user.save();
 
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
     await sendEmail({
       to: user.email,
       subject: 'Reset your DIZEE Tickets password',
-      html: `
-        <div style="font-family:Helvetica,Arial,sans-serif;max-width:480px;margin:0 auto;padding:40px 20px;background:#000;color:#fff;">
-          <div style="font-size:18px;letter-spacing:1px;margin-bottom:32px;">DIZEE TICKETS</div>
-          <div style="font-size:20px;font-weight:bold;margin-bottom:8px;">Reset your password</div>
-          <div style="font-size:14px;color:#999;margin-bottom:24px;">Click below to reset your password. This link expires in 1 hour.</div>
-          <div style="text-align:center;margin:24px 0;">
-            <a href="${frontendUrl}/reset-password?token=${resetToken}" style="display:inline-block;background:#FF2300;color:#fff;text-decoration:none;font-weight:bold;padding:12px 24px;border-radius:8px;">Reset Password</a>
-          </div>
-        </div>
-      `,
+      html: renderTicketsPasswordResetEmailHtml(user.email, resetUrl),
     }).catch(() => {});
 
     return res.status(200).json(new apiResponse(200, 'If an account exists, a reset email has been sent'));
@@ -179,6 +191,194 @@ export async function resetPassword(req: Request, res: Response) {
     await user.save();
 
     return res.status(200).json(new apiResponse(200, 'Password reset successful'));
+  } catch (error: any) {
+    return res.status(500).json(new apiResponse(500, 'Internal server error'));
+  }
+}
+
+// ── OTP-based auth ──────────────────────────────────────────────────────
+
+function generateOtp(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+async function sendOtpEmail(email: string, code: string) {
+  await sendEmail({
+    to: email,
+    subject: 'Your DIZEE Tickets verification code',
+    html: renderTicketsOtpEmailHtml(email, code),
+  });
+}
+
+export async function checkEmail(req: Request, res: Response) {
+  try {
+    const email = (req.query.email as string || '').trim().toLowerCase();
+    if (!email) {
+      return res.status(400).json(new apiResponse(400, 'Email is required'));
+    }
+
+    const user = await UserModel.findOne({ email });
+    return res.status(200).json(new apiResponse(200, 'Email check', { exist: !!user }));
+  } catch (error: any) {
+    return res.status(500).json(new apiResponse(500, 'Internal server error'));
+  }
+}
+
+export async function sendOtp(req: Request, res: Response) {
+  try {
+    const email = (req.body.email || '').trim().toLowerCase();
+    if (!email) {
+      return res.status(400).json(new apiResponse(400, 'Email is required'));
+    }
+
+    const user = await UserModel.findOne({ email }).select('+otpCode +otpExpires');
+    if (!user) {
+      // Don't reveal whether account exists — return success silently
+      return res.status(200).json(new apiResponse(200, 'If an account exists, a code has been sent'));
+    }
+
+    const code = generateOtp();
+    user.otpCode = code;
+    user.otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    await user.save();
+
+    await sendOtpEmail(email, code);
+    return res.status(200).json(new apiResponse(200, 'Verification code sent'));
+  } catch (error: any) {
+    return res.status(500).json(new apiResponse(500, 'Internal server error'));
+  }
+}
+
+export async function loginWithOtp(req: Request, res: Response) {
+  try {
+    const email = (req.body.email || '').trim().toLowerCase();
+    const code = (req.body.code || '').trim();
+
+    if (!email || !code) {
+      return res.status(400).json(new apiResponse(400, 'Email and code are required'));
+    }
+
+    const user = await UserModel.findOne({ email }).select('+otpCode +otpExpires');
+    if (!user || !user.otpCode || !user.otpExpires) {
+      return res.status(401).json(new apiResponse(401, 'Invalid or expired code'));
+    }
+
+    if (new Date() > user.otpExpires) {
+      user.otpCode = undefined;
+      user.otpExpires = undefined;
+      await user.save();
+      return res.status(401).json(new apiResponse(401, 'Code has expired. Please request a new one.'));
+    }
+
+    if (user.otpCode !== code) {
+      return res.status(401).json(new apiResponse(401, 'Invalid code'));
+    }
+
+    // OTP verified — clear it and log in
+    user.otpCode = undefined;
+    user.otpExpires = undefined;
+    user.emailVerified = true;
+    user.lastLoginAt = new Date();
+    await user.save();
+
+    const accessToken = generateAccessToken(user._id.toString());
+    const refreshToken = generateRefreshToken(user._id.toString());
+
+    const orgData = await ensureOrganization(user._id.toString(), user.name, user.email);
+
+    return res.status(200).json(new apiResponse(200, 'Login successful', {
+      user: user.toJSON(),
+      accessToken,
+      refreshToken,
+      organization: orgData,
+    }));
+  } catch (error: any) {
+    return res.status(500).json(new apiResponse(500, 'Internal server error'));
+  }
+}
+
+export async function signupInit(req: Request, res: Response) {
+  try {
+    const name = (req.body.name || '').trim();
+    const email = (req.body.email || '').trim().toLowerCase();
+
+    if (!name || !email) {
+      return res.status(400).json(new apiResponse(400, 'Name and email are required'));
+    }
+
+    let user = await UserModel.findOne({ email }).select('+otpCode +otpExpires');
+
+    if (user) {
+      // Account already exists — send OTP so they can log in instead
+      const code = generateOtp();
+      user.otpCode = code;
+      user.otpExpires = new Date(Date.now() + 10 * 60 * 1000);
+      await user.save();
+      await sendOtpEmail(email, code);
+      return res.status(200).json(new apiResponse(200, 'Verification code sent'));
+    }
+
+    // Create new user (no password needed for OTP flow)
+    const code = generateOtp();
+    user = await UserModel.create({
+      name,
+      email,
+      otpCode: code,
+      otpExpires: new Date(Date.now() + 10 * 60 * 1000),
+    });
+
+    await sendOtpEmail(email, code);
+    return res.status(201).json(new apiResponse(201, 'Account created. Verification code sent.'));
+  } catch (error: any) {
+    if (error.code === 11000) {
+      return res.status(409).json(new apiResponse(409, 'An account with this email already exists'));
+    }
+    return res.status(500).json(new apiResponse(500, 'Internal server error', {}, error.message));
+  }
+}
+
+export async function signupVerify(req: Request, res: Response) {
+  try {
+    const email = (req.body.email || '').trim().toLowerCase();
+    const code = (req.body.code || '').trim();
+
+    if (!email || !code) {
+      return res.status(400).json(new apiResponse(400, 'Email and code are required'));
+    }
+
+    const user = await UserModel.findOne({ email }).select('+otpCode +otpExpires');
+    if (!user || !user.otpCode || !user.otpExpires) {
+      return res.status(401).json(new apiResponse(401, 'Invalid or expired code'));
+    }
+
+    if (new Date() > user.otpExpires) {
+      user.otpCode = undefined;
+      user.otpExpires = undefined;
+      await user.save();
+      return res.status(401).json(new apiResponse(401, 'Code has expired. Please request a new one.'));
+    }
+
+    if (user.otpCode !== code) {
+      return res.status(401).json(new apiResponse(401, 'Invalid code'));
+    }
+
+    user.otpCode = undefined;
+    user.otpExpires = undefined;
+    user.emailVerified = true;
+    user.lastLoginAt = new Date();
+    await user.save();
+
+    const accessToken = generateAccessToken(user._id.toString());
+    const refreshToken = generateRefreshToken(user._id.toString());
+
+    const orgData = await ensureOrganization(user._id.toString(), user.name, user.email);
+
+    return res.status(200).json(new apiResponse(200, 'Account verified', {
+      user: user.toJSON(),
+      accessToken,
+      refreshToken,
+      organization: orgData,
+    }));
   } catch (error: any) {
     return res.status(500).json(new apiResponse(500, 'Internal server error'));
   }

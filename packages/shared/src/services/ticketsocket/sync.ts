@@ -61,9 +61,8 @@ export async function syncShowFromTicketSocket(showId: string): Promise<{ succes
     }
 
     await ShowModel.findByIdAndUpdate(showId, {
-      ticketsSold: eventData.ticketsSold ?? show.ticketsSold,
-      grossSales: eventData.grossSales ?? show.grossSales,
-      capacity: eventData.capacity ?? show.capacity,
+      tix_sold: eventData.ticketsSold ?? show.tix_sold,
+      sellable_cap: eventData.capacity ?? show.sellable_cap,
     });
 
     await IntegrationSyncLogModel.create({

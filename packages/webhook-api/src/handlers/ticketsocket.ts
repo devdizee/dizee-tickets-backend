@@ -79,8 +79,8 @@ export async function handleTicketSocketWebhook(req: Request, res: Response) {
           { $group: { _id: null, totalQty: { $sum: '$quantity' }, totalGross: { $sum: '$grossAmount' } } },
         ]);
         if (orderAgg[0]) {
-          show.ticketsSold = orderAgg[0].totalQty;
-          show.grossSales = orderAgg[0].totalGross;
+          show.tix_sold = orderAgg[0].totalQty;
+          (show as any).grossSales = orderAgg[0].totalGross;
           await show.save();
         }
 
@@ -120,9 +120,9 @@ export async function handleTicketSocketWebhook(req: Request, res: Response) {
       case 'event.updated': {
         const show = await ShowModel.findOne({ ticketSocketEventId: data.eventId });
         if (show) {
-          if (data.ticketsSold !== undefined) show.ticketsSold = data.ticketsSold;
-          if (data.grossSales !== undefined) show.grossSales = data.grossSales;
-          if (data.capacity !== undefined) show.capacity = data.capacity;
+          if (data.ticketsSold !== undefined) show.tix_sold = data.ticketsSold;
+          if (data.grossSales !== undefined) (show as any).grossSales = data.grossSales;
+          if (data.capacity !== undefined) show.sellable_cap = data.capacity;
           await show.save();
         }
         break;

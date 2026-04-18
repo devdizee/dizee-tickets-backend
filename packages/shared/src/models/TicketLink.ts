@@ -59,7 +59,7 @@ const TicketLinkSchema = new Schema<ITicketLink>(
   {
     timestamps: true,
     toJSON: {
-      transform(_doc, ret) {
+      transform(_doc, ret: Record<string, any>) {
         ret.id = ret._id;
         delete ret._id;
         delete ret.__v;

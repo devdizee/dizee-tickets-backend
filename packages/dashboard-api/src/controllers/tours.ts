@@ -41,12 +41,11 @@ export async function getTour(req: AuthenticatedRequest, res: Response) {
     if (!tour) return res.status(404).json(new apiResponse(404, 'Tour not found'));
 
     const shows = await ShowModel.find({ tourId: tour._id })
-      .populate('venueId', 'name city capacity')
-      .sort({ date: 1 });
+      .sort({ perf_date: 1 });
 
-    const totalCapacity = shows.reduce((sum, s) => sum + (s.capacity || 0), 0);
-    const totalTicketsSold = shows.reduce((sum, s) => sum + s.ticketsSold, 0);
-    const totalGross = shows.reduce((sum, s) => sum + s.grossSales, 0);
+    const totalCapacity = shows.reduce((sum, s) => sum + (s.sellable_cap || 0), 0);
+    const totalTicketsSold = shows.reduce((sum, s) => sum + (s.tix_sold || 0), 0);
+    const totalGross = 0;
 
     return res.status(200).json(new apiResponse(200, 'Tour', {
       tour,

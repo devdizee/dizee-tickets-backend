@@ -4,7 +4,7 @@ import { TicketLinkModel, getRedisClient, CACHE_KEYS, CACHE_TTL } from '@dizee-t
 
 export async function handleLinkRedirect(req: Request, res: Response) {
   try {
-    const { code } = req.params;
+    const code = req.params.code as string;
     if (!code) return res.status(400).json({ error: 'Link code is required' });
 
     const redis = getRedisClient();
