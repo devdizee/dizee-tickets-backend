@@ -32,7 +32,6 @@ const PromoterSchema = new Schema<IPromoter>(
   }
 );
 
-PromoterSchema.index({ slug: 1 }, { unique: true });
 PromoterSchema.index({ organizationId: 1 });
 
 export const PromoterModel = mongoose.model<IPromoter>('Promoter', PromoterSchema);

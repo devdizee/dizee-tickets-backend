@@ -36,7 +36,6 @@ const ArtistSchema = new Schema<IArtist>(
   }
 );
 
-ArtistSchema.index({ slug: 1 }, { unique: true });
 ArtistSchema.index({ organizationId: 1 });
 
 export const ArtistModel = mongoose.model<IArtist>('Artist', ArtistSchema);

@@ -44,7 +44,6 @@ const VenueSchema = new Schema<IVenue>(
   }
 );
 
-VenueSchema.index({ slug: 1 }, { unique: true });
 VenueSchema.index({ organizationId: 1 });
 VenueSchema.index({ city: 1, country: 1 });
 

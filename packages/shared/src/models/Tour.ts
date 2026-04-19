@@ -37,7 +37,6 @@ const TourSchema = new Schema<ITour>(
   }
 );
 
-TourSchema.index({ slug: 1 }, { unique: true });
 TourSchema.index({ artistId: 1 });
 TourSchema.index({ organizationId: 1 });
 

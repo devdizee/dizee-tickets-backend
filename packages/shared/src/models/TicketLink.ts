@@ -68,7 +68,6 @@ const TicketLinkSchema = new Schema<ITicketLink>(
   }
 );
 
-TicketLinkSchema.index({ shortCode: 1 }, { unique: true });
 TicketLinkSchema.index({ showId: 1, status: 1 });
 TicketLinkSchema.index({ organizationId: 1 });
 TicketLinkSchema.index({ slug: 1, showId: 1 });

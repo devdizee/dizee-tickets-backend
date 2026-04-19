@@ -39,7 +39,11 @@ app.get('/shows/:slug', publicLimiter, getPublicShow);
 app.get('/guest/:slug', publicLimiter, getPublicGuestList);
 app.post('/guest/:slug', guestListLimiter, submitGuestRequest);
 
-const PORT = process.env.PUBLIC_API_PORT || 8002;
+// In development, ignore shared `PORT` so `npm run dev` (Turbo) does not make every API bind the same port.
+const PORT =
+  process.env.PUBLIC_API_PORT ||
+  (process.env.NODE_ENV !== 'development' ? process.env.PORT : undefined) ||
+  8002;
 const MONGODB_URI = process.env.MONGODB_URI || '';
 
 async function start() {

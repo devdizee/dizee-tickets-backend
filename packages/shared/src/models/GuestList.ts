@@ -38,8 +38,6 @@ const GuestListSchema = new Schema<IGuestList>(
   }
 );
 
-GuestListSchema.index({ slug: 1 }, { unique: true });
-GuestListSchema.index({ showId: 1 }, { unique: true });
 GuestListSchema.index({ organizationId: 1 });
 
 export const GuestListModel = mongoose.model<IGuestList>('GuestList', GuestListSchema);

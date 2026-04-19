@@ -16,7 +16,11 @@ app.use(express.json({ limit: '5mb' }));
 app.get('/health', (_req, res) => res.json({ status: 'ok', service: 'webhook-api' }));
 app.use('/webhooks', routes);
 
-const PORT = process.env.WEBHOOK_PORT || 8001;
+// In development, ignore shared `PORT` so `npm run dev` (Turbo) does not make every API bind the same port.
+const PORT =
+  process.env.WEBHOOK_PORT ||
+  (process.env.NODE_ENV !== 'development' ? process.env.PORT : undefined) ||
+  8001;
 const MONGODB_URI = process.env.MONGODB_URI || '';
 
 async function start() {

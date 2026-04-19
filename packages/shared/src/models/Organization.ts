@@ -33,7 +33,6 @@ const OrganizationSchema = new Schema<IOrganization>(
   }
 );
 
-OrganizationSchema.index({ slug: 1 }, { unique: true });
 OrganizationSchema.index({ type: 1 });
 
 export const OrganizationModel = mongoose.model<IOrganization>('Organization', OrganizationSchema);

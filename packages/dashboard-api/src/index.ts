@@ -48,7 +48,7 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 });
 
 // Database + Server
-const PORT = process.env.PORT || 8000;
+const PORT = process.env.DASHBOARD_API_PORT || process.env.PORT || 8000;
 const MONGODB_URI = process.env.MONGODB_URI || '';
 
 async function start() {

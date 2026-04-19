@@ -142,7 +142,7 @@ const ShowSchema = new Schema<IShow>(
     ],
 
     ticketingProvider: { type: String, enum: TICKETING_PROVIDERS, default: 'manual' },
-    ticketSocketEventId: { type: String, sparse: true },
+    ticketSocketEventId: { type: String },
     guestListEnabled: { type: Boolean, default: false },
 
     notes: { type: String },
@@ -175,7 +175,6 @@ const ShowSchema = new Schema<IShow>(
   }
 );
 
-ShowSchema.index({ slug: 1 }, { unique: true });
 ShowSchema.index({ artist: 1, perf_date: -1 });
 ShowSchema.index({ organizationId: 1, perf_date: -1 });
 ShowSchema.index({ status: 1, perf_date: -1 });
