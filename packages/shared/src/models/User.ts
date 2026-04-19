@@ -11,6 +11,8 @@ export interface IUser extends Document {
   passwordResetExpires?: Date;
   otpCode?: string;
   otpExpires?: Date;
+  /** When logged in user requests OTP for a new email, pending address until verified */
+  pendingNewEmail?: string;
   lastLoginAt?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -28,6 +30,7 @@ const UserSchema = new Schema<IUser>(
     passwordResetExpires: { type: Date, select: false },
     otpCode: { type: String, select: false },
     otpExpires: { type: Date, select: false },
+    pendingNewEmail: { type: String, select: false, lowercase: true, trim: true },
     lastLoginAt: { type: Date },
   },
   {
@@ -43,6 +46,7 @@ const UserSchema = new Schema<IUser>(
         delete ret.passwordResetExpires;
         delete ret.otpCode;
         delete ret.otpExpires;
+        delete ret.pendingNewEmail;
       },
     },
   }

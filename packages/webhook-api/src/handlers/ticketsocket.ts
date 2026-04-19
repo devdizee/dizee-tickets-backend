@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import crypto from 'crypto';
+import { Types } from 'mongoose';
 import {
   ShowModel, TicketOrderModel, FanModel, TicketLinkModel,
   IntegrationSyncLogModel, apiResponse,
@@ -87,7 +88,7 @@ export async function handleTicketSocketWebhook(req: Request, res: Response) {
         if (data.buyerEmail) {
           const fan = await FanModel.findOne({ organizationId: show.organizationId, email: data.buyerEmail.toLowerCase() });
           if (fan) {
-            if (!fan.showIds.map((id) => id.toString()).includes(show._id.toString())) {
+            if (!fan.showIds.map((id: Types.ObjectId) => id.toString()).includes(show._id.toString())) {
               fan.showIds.push(show._id);
             }
             fan.totalTicketsPurchased += data.quantity || 1;

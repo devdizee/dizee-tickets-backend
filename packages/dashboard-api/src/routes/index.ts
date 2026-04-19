@@ -15,10 +15,16 @@ import aiRoutes from './ai';
 import ticketmasterRoutes from './ticketmaster';
 import publicRoutes from './public';
 import waitlistRoutes from './waitlist';
+import ticketsPublicHub from './ticketsPublicHub';
+import guestlistPublicHub from './guestlistPublicHub';
 
 const router = Router();
 
 router.use('/public', publicRoutes);
+
+/** Main DIZEE–compatible public hubs (org slug = :slug) */
+router.use('/tickets', ticketsPublicHub);
+router.use('/guestlist', guestlistPublicHub);
 
 router.use('/auth', authRoutes);
 router.use('/orgs', orgRoutes);

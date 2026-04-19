@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { requireAuth, requireOrgAccess, requireRole } from '../middleware/auth';
 import {
-  createOrganization, getMyOrganizations, getOrganization, updateOrganization,
+  createOrganization, getMyOrganizations, getOrganization, updateOrganization, updateMyOrganization,
   inviteMember, acceptInvite, getMembers, updateMemberRole, removeMember,
 } from '../controllers/organizations';
 
@@ -9,6 +9,7 @@ const router = Router();
 
 router.post('/', requireAuth, createOrganization);
 router.get('/mine', requireAuth, getMyOrganizations);
+router.patch('/mine', requireAuth, updateMyOrganization);
 router.get('/:id', requireAuth, getOrganization);
 router.put('/:id', requireAuth, requireOrgAccess, requireRole('owner', 'admin'), updateOrganization);
 

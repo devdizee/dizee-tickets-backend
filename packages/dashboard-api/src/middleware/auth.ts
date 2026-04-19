@@ -65,7 +65,11 @@ export async function requireAuth(req: AuthenticatedRequest, res: Response, next
 
 export async function requireOrgAccess(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   try {
-    const orgId = (req.params.orgId || req.headers['x-organization-id'] || '') as string;
+    const orgId =
+      (typeof req.params.id === 'string' && req.params.id) ||
+      (typeof req.params.orgId === 'string' && req.params.orgId) ||
+      (req.headers['x-organization-id'] as string) ||
+      '';
     if (!orgId) {
       return res.status(400).json(new apiResponse(400, 'Organization ID is required'));
     }

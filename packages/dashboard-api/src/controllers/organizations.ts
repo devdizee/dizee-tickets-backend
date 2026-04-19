@@ -39,6 +39,38 @@ export async function getMyOrganizations(req: AuthenticatedRequest, res: Respons
   }
 }
 
+/** PATCH /orgs/mine — update the caller’s primary org (onboarding + settings). */
+export async function updateMyOrganization(req: AuthenticatedRequest, res: Response) {
+  try {
+    const parsed = updateOrgSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json(new apiResponse(400, 'Validation failed', {}, parsed.error.flatten()));
+
+    const membership = await MembershipModel.findOne({
+      userId: req.user!._id,
+      status: 'active',
+      role: { $in: ['owner', 'admin'] },
+    }).sort({ createdAt: 1 });
+
+    if (!membership) {
+      return res.status(403).json(new apiResponse(403, 'You do not have permission to update an organization'));
+    }
+
+    const orgId = membership.organizationId.toString();
+
+    if (parsed.data.slug) {
+      const existing = await OrganizationModel.findOne({ slug: parsed.data.slug, _id: { $ne: orgId } });
+      if (existing) return res.status(409).json(new apiResponse(409, 'Username is already taken'));
+    }
+
+    const org = await OrganizationModel.findByIdAndUpdate(orgId, parsed.data, { new: true });
+    if (!org) return res.status(404).json(new apiResponse(404, 'Organization not found'));
+
+    return res.status(200).json(new apiResponse(200, 'Organization updated', { organization: org }));
+  } catch (error: any) {
+    return res.status(500).json(new apiResponse(500, 'Internal server error'));
+  }
+}
+
 export async function getOrganization(req: AuthenticatedRequest, res: Response) {
   try {
     const org = await OrganizationModel.findById(req.params.id);

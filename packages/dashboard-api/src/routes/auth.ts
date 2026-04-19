@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import {
-  signup, login, logout, me, verifyEmail, forgotPassword, resetPassword, protectAuth,
+  signup, login, logout, me, updateMe, deleteAccount, verifyOtpSession, verifyEmail, forgotPassword, resetPassword, protectAuth,
   checkEmail, sendOtp, loginWithOtp, signupInit, signupVerify,
 } from '../controllers/auth';
 import { requireAuth } from '../middleware/auth';
@@ -23,6 +23,9 @@ router.post('/signup', authRateLimiter, signup);
 router.post('/login', authRateLimiter, login);
 router.post('/logout', requireAuth, logout);
 router.get('/me', requireAuth, me);
+router.patch('/me', requireAuth, updateMe);
+router.delete('/me', requireAuth, deleteAccount);
+router.post('/verify-otp', requireAuth, verifyOtpSession);
 router.post('/verify-email', verifyEmail);
 router.post('/forgot-password', authRateLimiter, forgotPassword);
 router.post('/reset-password', authRateLimiter, resetPassword);

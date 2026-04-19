@@ -8,6 +8,12 @@ import {
   publicGuestFormSchema,
 } from '@dizee-tickets/shared';
 
+function paramStr(p: string | string[] | undefined): string {
+  if (typeof p === 'string') return p;
+  if (Array.isArray(p) && p[0]) return p[0];
+  return '';
+}
+
 function showPublicPayload(show: { id?: string; slug: string; title?: string; perf_date?: string; venue?: string; city?: string; state?: string; artist?: string; tix_sold?: number; sellable_cap?: number; on_sale?: boolean; show_on_ticket_link?: boolean; ticket_link?: string; ticket_public_price?: number; ticket_public_quantity?: number; ticket_page_password_enabled?: boolean; ticket_page_password?: string }) {
   const pwOn = !!(show.ticket_page_password_enabled && show.ticket_page_password);
   return {
@@ -33,7 +39,8 @@ function showPublicPayload(show: { id?: string; slug: string; title?: string; pe
 /** GET /public/ticket-page/:orgSlug/:showSlug */
 export async function getPublicTicketPage(req: Request, res: Response) {
   try {
-    const { orgSlug, showSlug } = req.params;
+    const orgSlug = paramStr(req.params.orgSlug);
+    const showSlug = paramStr(req.params.showSlug);
     const org = await OrganizationModel.findOne({ slug: orgSlug.toLowerCase() });
     if (!org) return res.status(404).json(new apiResponse(404, 'Not found'));
 
@@ -53,7 +60,8 @@ export async function getPublicTicketPage(req: Request, res: Response) {
 /** POST /public/ticket-page/:orgSlug/:showSlug/verify */
 export async function verifyPublicTicketPassword(req: Request, res: Response) {
   try {
-    const { orgSlug, showSlug } = req.params;
+    const orgSlug = paramStr(req.params.orgSlug);
+    const showSlug = paramStr(req.params.showSlug);
     const password = String(req.body?.password ?? '');
 
     const org = await OrganizationModel.findOne({ slug: orgSlug.toLowerCase() });
@@ -81,7 +89,8 @@ export async function verifyPublicTicketPassword(req: Request, res: Response) {
 /** GET /public/guest-page/:orgSlug/:showSlug */
 export async function getPublicGuestPage(req: Request, res: Response) {
   try {
-    const { orgSlug, showSlug } = req.params;
+    const orgSlug = paramStr(req.params.orgSlug);
+    const showSlug = paramStr(req.params.showSlug);
     const headerPw = (req.headers['x-guest-list-password'] as string) || '';
 
     const org = await OrganizationModel.findOne({ slug: orgSlug.toLowerCase() });
@@ -132,7 +141,8 @@ export async function getPublicGuestPage(req: Request, res: Response) {
 /** POST /public/guest-page/:orgSlug/:showSlug/verify */
 export async function verifyPublicGuestPassword(req: Request, res: Response) {
   try {
-    const { orgSlug, showSlug } = req.params;
+    const orgSlug = paramStr(req.params.orgSlug);
+    const showSlug = paramStr(req.params.showSlug);
     const password = String(req.body?.password ?? '');
 
     const org = await OrganizationModel.findOne({ slug: orgSlug.toLowerCase() });
@@ -163,7 +173,8 @@ export async function verifyPublicGuestPassword(req: Request, res: Response) {
 /** POST /public/guest-page/:orgSlug/:showSlug/request */
 export async function submitPublicGuestRequest(req: Request, res: Response) {
   try {
-    const { orgSlug, showSlug } = req.params;
+    const orgSlug = paramStr(req.params.orgSlug);
+    const showSlug = paramStr(req.params.showSlug);
     const parsed = publicGuestFormSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json(new apiResponse(400, 'Validation failed', {}, parsed.error.flatten()));
