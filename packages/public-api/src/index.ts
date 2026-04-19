@@ -9,6 +9,8 @@ import { handleLinkRedirect } from './handlers/redirect';
 import { submitGuestRequest, getPublicGuestList } from './handlers/guestRequest';
 import { getPublicShow } from './handlers/publicShow';
 
+// File change under packages/public-api to test Railway watch-path / auto-deploy.
+
 const app = express();
 app.disable('x-powered-by');
 app.set('trust proxy', true);
